@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Sub-rede IPv4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="container">
+
+  <!-- ===== Painel de entrada ===== -->
+  <section class="card">
+    <h2 class="card-title">Parâmetros de entrada</h2>
+    <p class="card-desc">Informe o endereço IPv4 e a máscara. Opcionalmente, divida a rede em sub-redes de tamanho igual.</p>
+
+    <div class="grid">
+      <div class="field">
+        <label for="ip">Endereço IP</label>
+        <input id="ip" type="text" value="192.168.1.10" placeholder="ex.: 192.168.1.10" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="cidr">Máscara (CIDR)</label>
+        <select id="cidr"></select>
+      </div>
+      <div class="field">
+        <label for="maskInput">Máscara decimal (opcional)</label>
+        <input id="maskInput" type="text" placeholder="ex.: 255.255.255.0" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="divisao">Dividir em sub-redes (iguais)</label>
+        <select id="divisao">
+          <option value="0">Não dividir</option>
+          <option value="1">2 sub-redes</option>
+          <option value="2">4 sub-redes</option>
+          <option value="3">8 sub-redes</option>
+          <option value="4">16 sub-redes</option>
+          <option value="5">32 sub-redes</option>
+          <option value="6">64 sub-redes</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btnCalcular" class="btn-primary">Calcular sub-rede</button>
+    <div id="erro" class="erro"></div>
+  </section>
+
+  <!-- ===== Resultado ===== -->
+  <section id="resultado" class="card hide">
+    <div class="card-head">
+      <h2 class="card-title">Resultado do cálculo</h2>
+      <button class="btn-ghost" id="btnCopiar">Copiar</button>
+    </div>
+
+    <div class="result-grid">
+      <div class="result-item"><span class="ri-label">Endereço de Rede</span><span class="ri-value" id="rede"></span></div>
+      <div class="result-item"><span class="ri-label">Broadcast</span><span class="ri-value" id="broadcast"></span></div>
+      <div class="result-item"><span class="ri-label">Máscara de Sub-rede</span><span class="ri-value" id="mascara"></span></div>
+      <div class="result-item"><span class="ri-label">Wildcard</span><span class="ri-value" id="wildcard"></span></div>
+      <div class="result-item"><span class="ri-label">Primeiro Host</span><span class="ri-value" id="primeiro"></span></div>
+      <div class="result-item"><span class="ri-label">Último Host</span><span class="ri-value" id="ultimo"></span></div>
+      <div class="result-item"><span class="ri-label">Hosts Utilizáveis</span><span class="ri-value" id="hosts"></span></div>
+      <div class="result-item"><span class="ri-label">Total de Endereços</span><span class="ri-value" id="total"></span></div>
+      <div class="result-item"><span class="ri-label">Classe do IP</span><span class="ri-value" id="classe"></span></div>
+      <div class="result-item"><span class="ri-label">Tipo de Endereço</span><span class="ri-value" id="tipo"></span></div>
+      <div class="result-item ri-wide"><span class="ri-label">IPv6 (IPv4 mapeado)</span><span class="ri-value" id="ipv6map"></span></div>
+    </div>
+
+    <div class="bin-grid">
+      <div class="bin-box">
+        <span class="ri-label">IP em binário</span>
+        <code class="bin" id="ipbin"></code>
+      </div>
+      <div class="bin-box">
+        <span class="ri-label">Máscara em binário</span>
+        <code class="bin" id="maskbin"></code>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="dot dot-net"></span> Bits de Rede</span>
+      <span class="legend-item"><span class="dot dot-host"></span> Bits de Host</span>
+    </div>
+  </section>
+
+  <!-- ===== Tabela de sub-redes (iguais) ===== -->
+  <section id="tabelaSub" class="card hide">
+    <h2 class="card-title">Sub-redes geradas (tamanho igual)</h2>
+    <div class="table-wrap">
+      <table id="subTable">
+        <thead>
+          <tr><th>#</th><th>Rede / Prefixo</th><th>Primeiro Host</th><th>Último Host</th><th>Broadcast</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== VLSM ===== -->
+  <section class="card">
+    <h2 class="card-title">VLSM — Sub-redes de tamanhos diferentes</h2>
+    <p class="card-desc">
+      Informe a rede base e, abaixo, a quantidade de hosts que cada sub-rede precisa
+      (uma por linha). A ferramenta aloca a máscara ideal para cada uma, da maior para a menor.
+    </p>
+    <div class="grid">
+      <div class="field">
+        <label for="vlsmRede">Rede base</label>
+        <input id="vlsmRede" type="text" value="192.168.1.0" placeholder="ex.: 192.168.1.0" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vlsmCidr">CIDR base</label>
+        <select id="vlsmCidr"></select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:16px">
+      <label for="vlsmReqs">Necessidades (uma por linha — ex.: <code>Vendas = 50</code> ou apenas <code>50</code>)</label>
+      <textarea id="vlsmReqs" rows="5" placeholder="Vendas = 50&#10;TI = 25&#10;Diretoria = 10&#10;Link = 2"></textarea>
+    </div>
+    <button id="btnVlsm" class="btn-primary">Calcular VLSM</button>
+    <div id="vlsmErro" class="erro"></div>
+
+    <div id="vlsmResultado" class="hide">
+      <div class="table-wrap" style="margin-top:18px">
+        <table id="vlsmTable">
+          <thead>
+            <tr><th>Sub-rede</th><th>Hosts pedidos</th><th>Rede / Prefixo</th><th>Faixa de Hosts</th><th>Broadcast</th><th>Capacidade</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="vlsmResumo" class="card-desc" style="margin-top:14px"></p>
+    </div>
+  </section>
+
+  <!-- ===== Calculadora reversa Hosts -> CIDR ===== -->
+  <section class="card">
+    <h2 class="card-title">Calculadora reversa — Hosts → CIDR</h2>
+    <p class="card-desc">Diga quantos hosts você precisa e descubra a menor máscara que comporta.</p>
+    <div class="grid">
+      <div class="field">
+        <label for="qtdHosts">Quantidade de hosts necessários</label>
+        <input id="qtdHosts" type="number" min="1" value="50" autocomplete="off">
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <button id="btnReverso" class="btn-primary" style="margin-top:0">Calcular CIDR</button>
+      </div>
+    </div>
+    <div id="reversoErro" class="erro"></div>
+    <div id="reversoResultado" class="result-grid hide" style="margin-top:18px">
+      <div class="result-item"><span class="ri-label">CIDR recomendado</span><span class="ri-value" id="rCidr"></span></div>
+      <div class="result-item"><span class="ri-label">Máscara</span><span class="ri-value" id="rMascara"></span></div>
+      <div class="result-item"><span class="ri-label">Hosts utilizáveis</span><span class="ri-value" id="rHosts"></span></div>
+      <div class="result-item"><span class="ri-label">Total de endereços</span><span class="ri-value" id="rTotal"></span></div>
+    </div>
+  </section>
+
+  <!-- ===== Meu IP atual ===== -->
+  <section class="card">
+    <h2 class="card-title">Meu IP atual (IPv4 e IPv6)</h2>
+    <p class="card-desc">Detecta o seu endereço IP público. <strong>Requer conexão com a internet.</strong></p>
+    <button id="btnMeuIp" class="btn-primary" style="margin-top:0">Detectar meu IP</button>
+    <div id="meuIpErro" class="erro"></div>
+    <div id="meuIpResultado" class="result-grid hide" style="margin-top:18px">
+      <div class="result-item"><span class="ri-label">IPv4 público</span><span class="ri-value" id="meuIpv4">—</span></div>
+      <div class="result-item"><span class="ri-label">IPv6 público</span><span class="ri-value" id="meuIpv6">—</span></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
